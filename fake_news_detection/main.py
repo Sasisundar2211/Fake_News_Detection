@@ -1,4 +1,7 @@
-from .fake_news_detector import FakeNewsDetector, create_sample_dataset
+try:
+    from .fake_news_detector import FakeNewsDetector, create_sample_dataset
+except ImportError:  # Support running this file directly as documented by the project layout.
+    from fake_news_detector import FakeNewsDetector, create_sample_dataset
 from sklearn.model_selection import train_test_split
 
 def main():
