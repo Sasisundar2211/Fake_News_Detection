@@ -1,181 +1,56 @@
-# Fake News Detection
+# Fake News Detection — Classical ML Demo
 
-## 🎯 Problem Statement
-Misinformation spreads rapidly across social platforms, harming public trust, safety, and brand integrity. Manual moderation doesn’t scale and keyword-based filters fail to understand context, sarcasm, and evolving narratives.
+An educational Python project that demonstrates text-feature engineering and
+classical machine-learning classification for news-like text. It is not a
+production moderation system and must not be used to make automated content
+or hiring decisions.
 
-## 💡 Unique Contribution
-This project delivers a production-ready fake news detection pipeline that:
-- Uses transformer-based language models for contextual understanding beyond keyword matching
-- Combines supervised classification with weak labeling and active learning loops
-- Provides explainability with SHAP/LIME for model decisions
-- Ships with CI, tests, and clear training vs inference separation for maintainability
+## What is implemented
 
-## 🛠️ Tech Stack
-- Modeling: Python, PyTorch/Transformers (DistilBERT/BERT), scikit-learn
-- NLP: spaCy, NLTK, Hugging Face Datasets
-- Data Versioning: DVC
-- Experiment Tracking: MLflow
-- Serving: FastAPI/uvicorn
-- Storage: parquet/CSV + optional S3
-- CI/CD: GitHub Actions
-- Testing: pytest, pytest-cov
+- A 10-article, in-code demonstration dataset (five real-labelled and five
+  fake-labelled examples).
+- A separately committed CSV with 8 sample records.
+- Text cleaning plus engineered text, source-credibility, bias, and clickbait
+  features.
+- Four scikit-learn classifiers: Logistic Regression, Random Forest, RBF SVM,
+  and Multinomial Naive Bayes; a soft-voting ensemble is then trained from
+  those classifiers.
+- A 70/30 stratified demonstration split with `random_state=42` in the runnable
+  demonstration path.
 
-## 📊 Results & Metrics
-- Accuracy: 0.94 on holdout set
-- F1-score: 0.93 (macro)
-- Inference latency: ~35ms per sample on CPU
-- Robustness: 10% performance drop or less under adversarial paraphrasing (tested)
+The project does **not** contain transformer models, external training data,
+MLflow, DVC, SHAP/LIME explanations, FastAPI, or measured production metrics.
 
-## 🧱 Pipeline Overview
-1) Data ingestion (news datasets, social media exports)
-2) Cleaning and normalization (URLs, emojis, punctuation, stopwords)
-3) Weak labeling and heuristics (headline/body contradiction, source credibility features)
-4) Feature extraction (transformer embeddings + engineered features)
-5) Model training (fine-tuning DistilBERT baseline + ensemble with LR/LightGBM)
-6) Evaluation and calibration (threshold tuning for precision/recall tradeoff)
-7) Inference API with explanation and confidence score
+## Run
 
-## 🔀 Training vs Inference Separation
-- training/
-  - data_prep.py: load/clean/split
-  - train.py: fine-tune model, log to MLflow, push to models/
-  - eval.py: metrics, confusion matrix, calibration curve
-- inference/
-  - server.py: FastAPI app with /predict endpoint
-  - predict.py: light-weight tokenizer + model wrapper
-  - explainer.py: SHAP/LIME explanation utilities
-
-## 🧪 Experiment Tracking (MLflow)
-- Logs: run params, metrics (accuracy/F1/AUC), confusion matrices
-- Artifacts: model weights, tokenizer, label encoder, plots
-- Launch dashboard: `mlflow ui`
-
-## 🏢 Business Impact / Real-world Use
-- Newsrooms: Prioritize fact-checking queue, reduce manual triage time by 60%
-- Platforms: Real-time flagging for moderation teams with confidence bands
-- Brands: Detect coordinated misinformation impacting campaigns or stock movement
-- Compliance: Auditable decisions with stored explanations per prediction
-
-## 🚀 Getting Started
-
-### Prerequisites
-- Python 3.9+
-- pip/venv
-- Optional: CUDA for GPU training
-
-### Installation
 ```bash
-git clone https://github.com/Sasisundar2211/Fake_News_Detection.git
-cd Fake_News_Detection
-python -m venv venv
-source venv/bin/activate  # Windows: venv\Scripts\activate
-pip install -r requirements.txt
+python -m venv .venv
+.venv\Scripts\activate  # Windows
+pip install -r fake_news_detection/requirements.txt
+python -m fake_news_detection.main
 ```
 
-### Data Setup
+Run tests with:
+
 ```bash
-# Place raw datasets under data/raw
-# Example: datasets from Kaggle/Hugging Face (news headlines + body)
-python training/data_prep.py --input data/raw --output data/processed
+pytest -q
 ```
 
-### Train
-```bash
-python training/train.py \
-  --model distilbert-base-uncased \
-  --train data/processed/train.parquet \
-  --valid data/processed/valid.parquet \
-  --epochs 3 --lr 3e-5 --batch-size 32
+## Repository layout
+
+```text
+fake_news_detection/
+  fake_news_detector.py  # feature engineering, training, evaluation, demo
+  main.py                # runnable demonstration entry point
+  web_app.py             # optional Streamlit interface
+  data/sample_data.csv   # 8 manually committed sample records
+tests/
+  test_demo_data.py
 ```
 
-### Evaluate
-```bash
-python training/eval.py \
-  --model-path models/best/ \
-  --test data/processed/test.parquet
-```
+## Limitations
 
-### Run Inference API
-```bash
-uvicorn inference.server:app --host 0.0.0.0 --port 8000 --reload
-# POST http://localhost:8000/predict
-```
-
-Example request:
-```bash
-curl -X POST http://localhost:8000/predict \
-  -H "Content-Type: application/json" \
-  -d '{"text": "Breaking: New miracle cure discovered..."}'
-```
-
-Response:
-```json
-{
-  "label": "fake",
-  "score": 0.91,
-  "explanations": {"top_tokens": ["miracle", "cure", "breaking"]}
-}
-```
-
-## 📁 Project Structure
-```
-Fake_News_Detection/
-├── training/
-│   ├── data_prep.py
-│   ├── train.py
-│   └── eval.py
-├── inference/
-│   ├── server.py
-│   ├── predict.py
-│   └── explainer.py
-├── src/
-│   ├── datasets/
-│   ├── features/
-│   ├── models/
-│   └── utils/
-├── tests/
-│   ├── test_preprocessing.py
-│   ├── test_model.py
-│   └── test_api.py
-├── models/
-├── data/
-├── docs/
-└── README.md
-```
-
-## 🧪 Testing
-```bash
-pytest -v --cov=src --cov-report=term-missing
-```
-
-Sample unit test (tests/test_model.py):
-```python
-from inference.predict import Predictor
-
-def test_predict_probability_range():
-    p = Predictor(model_path="models/best/")
-    out = p.predict("Some headline text")
-    assert 0.0 <= out["score"] <= 1.0
-```
-
-## ⚙️ CI/CD
-- GitHub Actions workflow at .github/workflows/ci.yml
-- Runs unit tests, linting, type checks
-- Optional Codecov upload for coverage
-
-## 🔍 Explainability
-- Token-level attributions via SHAP/LIME
-- Highlighted tokens attached in response for UI display
-
-## 🖼️ Screenshots / Demo
-- UI mock: docs/screenshots/demo.png
-- Live demo: Coming soon (add link)
-
-## 🔮 Next Steps
-- Add stance detection (headline-body contradiction classifier)
-- Active learning loop in production
-- Adversarial augmentation for robustness
-
-## 👤 Author
-Sasisundar (GitHub: @Sasisundar2211)
-LinkedIn: https://www.linkedin.com/in/sasisundar
+The data is intentionally small and synthetic. Results from it are not useful
+estimates of real-world misinformation detection performance. A future version
+would need a documented, licensed dataset; held-out evaluation; bias analysis;
+and reproducible experiment tracking.

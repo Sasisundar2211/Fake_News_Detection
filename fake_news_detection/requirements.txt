@@ -6,3 +6,4 @@ textblob
 seaborn
 plotly
 tqdm
+streamlit
